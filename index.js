@@ -41,6 +41,11 @@ export default {
     function refuseIfRepeating(tool, args) {
       const sig = argsSig(tool, args)
       if (recent.filter((s) => s === sig).length >= blockAfter) {
+        // Evict one signature so the *next* identical call passes: the model
+        // gets exactly ONE blocked attempt to read and change course, then a
+        // real call slot. Without eviction the guard spams refusals forever
+        // and the model can never act again (observed live, 12 refusals).
+        recent.splice(recent.indexOf(sig), 1)
         throw new Error(
           `repetition detected: ${tool} already ran ${blockAfter} times with these exact arguments. ` +
             "Retrying identically adds no information — change approach or report the blocker to the user."
