@@ -1,0 +1,27 @@
+{
+  "name": "loop-guard",
+  "version": "1.0.0",
+  "description": "No-progress guard for the OpenCode agent tool loop: blocks a third identical tool call and injects a fresh observation instead.",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "agent-loop",
+    "guard",
+    "loop-detection"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Armanoide/loop-guard.git"
+  },
+  "files": [
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ]
+}
