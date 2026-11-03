@@ -1,13 +1,13 @@
-// loop-guard — no-progress guard for the agent tool loop.
-// V2 shape: default export = { id, setup(ctx) }.
-// After each call: hash (tool, canonical args) into a window of 3.
-// Before each call: identical tool+args already seen twice = no new
-// information entering the loop -> throw "repetition detected" so the model
-// reads a NEW observation instead of re-running blindly.
+// loop-guard — no-progress guard for the OpenCode agent tool loop.
+// Blocks a third identical (tool, args) call within a sliding window and
+// surfaces a repetition-detected error to the model, so an unchanged
+// observation no longer re-executes silently.
+// Configurable via plugin options in opencode.json:
+//   { "plugins": [{ "package": "./plugins/loop-guard",
+//                   "options": { "window": 3, "blockAfter": 2 } }] }
 import { createHash } from "node:crypto"
 
-const WINDOW = 3
-const recent = [] // signatures of completed calls, this server process
+const DEFAULTS = { window: 3, blockAfter: 2 }
 
 function canonical(obj) {
   if (obj === null || typeof obj !== "object") return obj
@@ -21,28 +21,38 @@ function argsSig(tool, args) {
   return createHash("sha256").update(JSON.stringify({ tool, args: canonical(args ?? {}) })).digest("hex")
 }
 
-function noteCall(tool, args) {
-  recent.push(argsSig(tool, args))
-  if (recent.length > WINDOW) recent.shift()
-}
-
-function refuseIfRepeating(tool, args) {
-  const sig = argsSig(tool, args)
-  if (recent.filter((s) => s === sig).length >= 2) {
-    throw new Error(
-      `repetition detected: ${tool} already ran twice with these exact arguments. ` +
-        "Retrying identically adds no information — change approach or report the blocker to the user."
-    )
-  }
+function positiveInt(value, fallback) {
+  const n = Number(value)
+  return Number.isInteger(n) && n > 0 ? n : fallback
 }
 
 export default {
   id: "loop-guard",
   async setup(ctx) {
+    const window = positiveInt(ctx.options?.window, DEFAULTS.window)
+    const blockAfter = positiveInt(ctx.options?.blockAfter, DEFAULTS.blockAfter)
+    const recent = [] // signatures of completed calls, this server process
+
+    function noteCall(tool, args) {
+      recent.push(argsSig(tool, args))
+      if (recent.length > window) recent.shift()
+    }
+
+    function refuseIfRepeating(tool, args) {
+      const sig = argsSig(tool, args)
+      if (recent.filter((s) => s === sig).length >= blockAfter) {
+        throw new Error(
+          `repetition detected: ${tool} already ran ${blockAfter} times with these exact arguments. ` +
+            "Retrying identically adds no information — change approach or report the blocker to the user."
+        )
+      }
+    }
+
     await ctx.tool.hook("execute.after", (event) => {
       if (event.status === "completed") noteCall(event.tool, event.input)
     })
     await ctx.tool.hook("execute.before", (event) => refuseIfRepeating(event.tool, event.input))
+
     return () => { recent.length = 0 }
   },
 }

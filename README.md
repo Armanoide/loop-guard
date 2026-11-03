@@ -26,6 +26,28 @@ Then add it to `plugins` in `~/.config/opencode/opencode.json`:
 
 Restart OpenCode (a full restart, not `/reload` — see Known limits).
 
+## Options
+
+Pass options through the object form in `opencode.json`:
+
+```jsonc
+{
+  "plugins": [
+    {
+      "package": "./plugins/loop-guard",
+      "options": { "window": 3, "blockAfter": 2 }
+    }
+  ]
+}
+```
+
+| Option | Default | Meaning |
+|---|---|---|
+| `window` | `3` | Sliding window size — how many recent calls the guard remembers. |
+| `blockAfter` | `2` | How many identical prior calls are tolerated before the next one is blocked. `1` = block on the 2nd repeat, `3` = allow two retries and block the third. |
+
+Invalid values (non-integer, zero, negative) fall back to the defaults.
+
 ## What it does
 
 - `ctx.tool.hook("execute.after")` — after every **completed** tool call, the

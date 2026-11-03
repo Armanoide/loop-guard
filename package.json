@@ -1,6 +1,6 @@
 {
   "name": "loop-guard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "No-progress guard for the OpenCode agent tool loop: blocks a third identical tool call and injects a fresh observation instead.",
   "type": "module",
   "main": "./index.js",
